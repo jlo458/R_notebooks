@@ -1,0 +1,72 @@
+
+```{r}
+
+clData = read_csv("champions_league_matches.csv")
+
+```
+
+```{r}
+clData
+```
+
+
+```{r}
+
+clData$home_possession = as.numeric(gsub("%", "", clData$home_possession)) 
+clData$away_possession = as.numeric(gsub("%", "", clData$away_possession))
+
+clData$home_goals <- as.numeric(sub("–.*", "", clData$score))
+clData$away_goals <- as.numeric(sub("*.–", "", clData$score))
+
+clData
+
+```
+
+```{r}
+plot(clData$home_possession, 
+     jitter(clData$home_goals, amount = 0.1),
+     xlab = "Home Possession (%)",
+     ylab = "Home Goals",
+     main = "Home Possession vs Goals Scored",
+     pch = 16,
+     col = rgb(0, 0, 1, 0.5))  # Semi-transparent blue
+
+modelA = lm(home_goals ~ home_possession, data = clData)
+abline(modelA, col = "red", lwd = 2) 
+
+
+```
+```{r}
+possession = c(clData$home_possession, clData$away_possession)
+goals = c(clData$home_goals, clData$away_goals)
+
+plot(possession, goals,
+     xlab = "Possession (%)",
+     ylab = "Goals Scored",
+     main = "Possession vs Goals",
+     pch = 16,
+     col = rgb(0, 0, 1, 0.5))
+
+abline(lm(goals ~ possession), col = "red", lwd = 2)
+
+# p-value
+cor.test(possession, goals)
+
+
+```
+
+
+
+```{r}
+plot(clData$home_passing_accuracy_pct, 
+     jitter(clData$home_goals, amount = 0.1),
+     xlab = "Home Possession (%)",
+     ylab = "Home Goals",
+     main = "Home Possession vs Goals Scored",
+     pch = 16,
+     col = rgb(0, 0, 1, 0.7))  
+
+modelC = lm(home_goals ~ home_possession, data = clData)
+abline(modelC, col = "darkblue", lwd = 2) 
+```
+

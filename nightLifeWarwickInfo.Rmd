@@ -1,0 +1,70 @@
+```{r}
+install.packages("readxl")
+#install.packages("lubricate")
+
+library(readxl)
+library(readr)
+```
+
+
+```{r}
+nightLifeData2 = read_excel("Nightlife Warwick.xlsx")
+nightLifeData2
+
+```
+
+Fixing Data Set
+
+```{r}
+colnames(nightLifeData)[colnames(nightLifeData) == "What time would you usually leave the club?"] = "ExitTime" 
+
+colnames(nightLifeData)[colnames(nightLifeData) == "How would you rate the nightlife at Warwick (including Leamington Spa and Coventry)?"] = "Rating"
+
+substr(nightLifeData$EntryTime, 1, 5)
+```
+
+Data Cleaning
+
+```{r}
+
+entry = as.POSIXct(nightLifeData$EntryTime, format = "%H:%M")
+exit = as.POSIXct(nightLifeData$ExitTime, format = "%H:%M")
+
+nightLifeData$time_spent = NULL
+nightLifeData$TimeSpent = as.numeric(difftime(exit, entry, units = "hours")) 
+
+nightLifeData$TimeSpent = ifelse(nightLifeData$TimeSpent < 0, 
+                                 nightLifeData$TimeSpent + 24, 
+                                 nightLifeData$TimeSpent)
+
+nightLifeData$TimeSpent = ifelse(nightLifeData$Name == "Prem Savani", 
+                                 nightLifeData$TimeSpent - 21, 
+                                 nightLifeData$TimeSpent)
+
+
+nightLifeData
+
+```
+
+```{r}
+
+plot(nightLifeData$TimeSpent, 
+     nightLifeData$Rating,
+     xlab = "Time Spent Clubbing",
+     ylab = "Final Rating", 
+     main = "Time Clubbing VS Final Rating",
+     pch = 16, 
+     col = "blue"
+     ) 
+
+modelW = lm(TimeSpent ~ Rating, data = nightLifeData)
+
+abline(modelW, col="red", lwd=2) 
+
+summary(modelW)
+
+cor.test(nightLifeData$TimeSpent, nightLifeData$Rating)
+
+
+```
+
