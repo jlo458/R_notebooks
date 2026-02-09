@@ -12,6 +12,7 @@ clData
 
 ```{r}
 
+# Data Cleaning
 clData$home_possession = as.numeric(gsub("%", "", clData$home_possession)) 
 clData$away_possession = as.numeric(gsub("%", "", clData$away_possession))
 
@@ -69,4 +70,5 @@ plot(clData$home_passing_accuracy_pct,
 modelC = lm(home_goals ~ home_possession, data = clData)
 abline(modelC, col = "darkblue", lwd = 2) 
 ```
+
 
