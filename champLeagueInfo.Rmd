@@ -1,28 +1,48 @@
+---
+title: "Champions League Games 2025 Analysis"
+author: "Jan Lopich"
+date: "`r Sys.Date()`"
+output: pdf_document
+---
+```{r setup, include=FALSE}
+knitr::opts_chunk$set(echo = TRUE, warning = FALSE, message = FALSE)
+```
 
+## Installing Packages
+```{r}
+#install.packages(c("readr", "readxl"))
+
+library(readxl)
+library(readr)
+```
+
+
+## Downloading Data
 ```{r}
 
 clData = read_csv("champions_league_matches.csv")
-
-```
-
-```{r}
 clData
+
 ```
 
 
+## Data Cleaning
 ```{r}
 
-# Data Cleaning
 clData$home_possession = as.numeric(gsub("%", "", clData$home_possession)) 
 clData$away_possession = as.numeric(gsub("%", "", clData$away_possession))
 
 clData$home_goals <- as.numeric(sub("–.*", "", clData$score))
 clData$away_goals <- as.numeric(sub("*.–", "", clData$score))
 
+colnames(clData)[colnames(clData) == "home_passing_accuracy_pct"] = "homePassAcc"
+
 clData
 
 ```
 
+
+## Possession vs Goals (Home)
 ```{r}
 plot(clData$home_possession, 
      jitter(clData$home_goals, amount = 0.1),
@@ -30,13 +50,16 @@ plot(clData$home_possession,
      ylab = "Home Goals",
      main = "Home Possession vs Goals Scored",
      pch = 16,
-     col = rgb(0, 0, 1, 0.5))  # Semi-transparent blue
+     col = rgb(0, 0, 1, 0.6))  # Semi-transparent blue
 
 modelA = lm(home_goals ~ home_possession, data = clData)
 abline(modelA, col = "red", lwd = 2) 
 
 
 ```
+
+
+## Possession vs Goals (Overall)
 ```{r}
 possession = c(clData$home_possession, clData$away_possession)
 goals = c(clData$home_goals, clData$away_goals)
@@ -48,27 +71,30 @@ plot(possession, goals,
      pch = 16,
      col = rgb(0, 0, 1, 0.5))
 
-abline(lm(goals ~ possession), col = "red", lwd = 2)
+abline(lm(goals ~ possession), col = "green", lwd = 2)
 
-# p-value
+# PMMC
 cor.test(possession, goals)
 
 
 ```
 
 
-
+## Passing Accuracy vs Goals Scored 
 ```{r}
-plot(clData$home_passing_accuracy_pct, 
+passingAccuracy = clData$homePassAcc
+modelC = lm(home_goals ~ homePassAcc, data = clData)
+
+plot(passingAccuracy, 
      jitter(clData$home_goals, amount = 0.1),
-     xlab = "Home Possession (%)",
+     xlab = "Passing Accuracy (%)",
      ylab = "Home Goals",
-     main = "Home Possession vs Goals Scored",
+     main = "Passing Accuracy vs Goals Scored",
      pch = 16,
      col = rgb(0, 0, 1, 0.7))  
 
-modelC = lm(home_goals ~ home_possession, data = clData)
 abline(modelC, col = "darkblue", lwd = 2) 
+
+# PMMC
+cor.test(passingAccuracy, clData$home_goals)
 ```
-
-
