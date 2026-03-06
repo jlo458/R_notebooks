@@ -1,0 +1,858 @@
+---
+title: "ST117 E1"
+author: "Homework Lab Group 016 Pod C"
+output:
+  pdf_document: 
+    latex_engine: xelatex
+  html_document: default
+---
+
+-   Please read the document "Guidance on Exercise Sets" on Moodle.
+-   Please replace xyz and X in the header by the correct codes for your Homework Pod.
+-   Please list all Homework Pod members who contributed to these solutions and which questions/parts they are responsible for (final write up).
+-   We put together some generic examples for TEX commands for formulas and for data visualisation and some references in case you need guidance on these things. See at the end of the document. Please delete them before submission.
+
+# This submission was created by:
+
+1.  Name and WARWICK ID: CHANGXUAN LI 5695200 Question A: 1, 2, 3, 4, 5
+2.  Name and WARWICK ID: LIUYINUO DU 5694901 Question A:6, 7, 8, 9
+3.  Name and WARWICK ID: CHIGOZIE IHEANYICHUKWU 2259977 B: 1,2
+4.  Name and WARWICK ID: JAN LOPICH 5678772 B: 3
+```{r setup, include=FALSE}
+library(knitr)
+```
+
+# Question A
+
+## 1. Cohort and lab groups
+
+First, I set a random seed to ensure the reproducibility of the simulation results. Then, using the randomNames package, I generated 340 synthetic student names and split each name into a first name and a last name. To facilitate the subsequent processing and viewing of the data, I also assigned each student a unique student ID ranging from 1 to 340. Next, I assigned the students to 17 experimental groups, with the preset number of students in each group as follows: 15 groups with 20 students each, 1 group with 21 students, and 1 group with 19 students. Finally, I created a data frame (grade book).
+
+```{r}
+# commented R commands
+library(randomNames)
+
+#number of students
+n_students <-340
+
+# Cohort and lab groups
+set.seed(21052008)
+
+student_names <- randomNames(n_students)
+
+# Split names into first and last names
+# Names are in format "LastName, FirstName"
+name_parts <- strsplit(student_names, ", ")
+
+# Extract last names and first names
+last_names <- sapply(name_parts, function(x) x[1])
+first_names <- sapply(name_parts, function(x) x[2])
+
+# Create student IDs
+student_ids <- 1:n_students
+
+# Assign lab groups
+# 15 groups with 20 students each = 300 students
+# 1 group with 21 students = 21 students
+# 1 group with 19 students = 19 students
+# Total: 300 + 21 + 19 = 340 students
+lab_assignments <- c(
+  rep(1:15, each = 20),   # Groups 1-15: 20 students each
+  rep(16, 21),            # Group 16: 21 students
+  rep(17, 19)             # Group 17: 19 students
+)
+
+# Create the grade book data frame
+gradebook <- data.frame(
+  StudentID = student_ids,
+  FirstName = first_names,
+  LastName = last_names,
+  LabGroup = lab_assignments,
+  stringsAsFactors = FALSE
+)
+
+# Display the first few rows of the grade book
+cat("First few rows of the Grade Book:\n")
+head(gradebook, 10)
+
+```
+
+## 2. Activities
+
+In this step, I simulated student participation in the three activities A0, A1, and A2 based on the existing Grade Book, using 1 to denote participation and 0 to denote non-participation.
+
+First, to ensure reproducibility of results, I fixed the random seed using \`set.seed(123)\`. Subsequently, 250 students were randomly selected from the entire cohort of 340 to participate in Activity A0. A new column, A0, was added to the Grade Book to record each student's participation status for this activity.
+
+Next, following the requirements outlined in the task specifications, participants for Activity A1 comprised all students who participated in Activity A0, supplemented by 35 students randomly selected from those who did not participate in Activity A0. To achieve this, I first identified all students with A0 = 0 (340 − 250 = 90 individuals), then randomly selected 35 from this group. These were merged with the A0 participants to form the A1 participant pool, with a new column added to Grade Book for marking.
+
+Similarly, participants for A2 comprise all participants from A0 plus 25 students randomly selected from those who never participated in A0. As specified in the problem, the ‘additional’ students in A2 are independently sampled from those not in A0. Therefore, another 25 students are randomly selected from those with A0 = 0 and merged with the A0 participants to form the A2 participant set. A new column, A2, is added for marking.
+
+Finally, I output the first few rows of the Grade Book to verify the correct generation of the new column, whilst simultaneously outputting summarised participant counts for A0, A1, and A2 to validate whether the simulation results meet the quantitative requirements specified in the question.
+
+```{r}
+# Simulate participation in Activity 0 (A0) by picking 250 students at random
+
+# A0: 250 students participate
+set.seed(123)  # For reproducibility
+a0_participants <- sample(1:n_students, 250)
+gradebook$A0 <- ifelse(gradebook$StudentID %in% a0_participants, 1, 0)
+
+# A1: A0 participants + 35 additional random students
+# First, identify students who did NOT participate in A0
+non_a0_students <- gradebook$StudentID[gradebook$A0 == 0]
+# Randomly select 35 from non-A0 students
+a1_additional <- sample(non_a0_students, 35)
+# A1 participants = A0 participants + 35 additional
+gradebook$A1 <- ifelse(gradebook$StudentID %in% c(a0_participants, a1_additional), 1, 0)
+
+# A2: A0 participants + 25 additional random students
+# Randomly select 25 from non-A0 students (independent from A1)
+a2_additional <- sample(non_a0_students, 25)
+# A2 participants = A0 participants + 25 additional
+gradebook$A2 <- ifelse(gradebook$StudentID %in% c(a0_participants, a2_additional), 1, 0)
+
+# Display the first few rows of the updated Grade Book
+cat("\nGrade Book with Activities (first 10 rows):\n\n")
+print(head(gradebook, 10))
+
+# Summary statistics
+cat("\nActivity Participation Summary:\n")
+cat("A0 participants:", sum(gradebook$A0), "\n")
+cat("A1 participants:", sum(gradebook$A1), "\n")
+cat("A2 participants:", sum(gradebook$A2), "\n")
+```
+
+## 3. Class Test
+
+### 3.(a)
+
+In this question, the problem assumes all students participate in the Class Test (C). Therefore, I have added a new column “C” to the Grade Book to record each student's test score. According to the conditional distribution provided in the problem table, students who participated in A0 and those who did not use different Beta distribution parameters to generate their scores.
+
+Specifically, to ensure reproducibility of simulation results, I first set the random seed: \`set.seed(456)\`. Subsequently, students were divided into two groups based on their A0 values. Random numbers were then generated from the corresponding Beta distributions to serve as their C scores, which were subsequently entered into the Grade Book.
+
+```{r}
+set.seed(456)  # For reproducibility
+
+# Initialize C column
+gradebook$C <- NA
+
+# For students who participated in A0
+gradebook$C[gradebook$A0 == 1] <- rbeta(sum(gradebook$A0 == 1), shape1 = 5, shape2 = 2)
+
+# For students who did not participate in A0
+gradebook$C[gradebook$A0 == 0] <- rbeta(sum(gradebook$A0 == 0), shape1 = 2, shape2 = 2)
+
+cat("\nClass Test scores added to Grade Book:\n\n")
+print(head(gradebook, 10))
+```
+
+### 3.(b)
+
+The Beta distribution is an appropriate choice for modeling test scores because:
+
+1.  **Natural range**: The Beta distribution is defined on the interval [0, 1], which perfectly matches the standardized score range for assessments.
+
+2.  **Flexibility**: It can model various distribution shapes (symmetric, left-skewed, right-skewed, U-shaped) by adjusting the parameters α and β, making it versatile for representing different performance patterns.
+
+3.  **Common in educational statistics**: The Beta distribution is widely used for modeling proportions and test scores in statistical analysis.
+
+**Why use different parameters based on A0 participation?**
+
+Different parameters reflect the hypothesis that student engagement affects academic performance:
+
+-   **Beta(5, 2) for A0 participants**:
+
+    Mean = 5/(5+2) ≈ 0.714
+
+    Right-skewed distribution with most values concentrated toward higher scores
+
+    Models the expected higher performance of engaged students who participate in activities
+
+-   **Beta(2, 2) for non-A0 participants**:
+
+    Mean = 2/(2+2) = 0.5
+
+    Symmetric distribution centered around 0.5
+
+    Models average performance of students with lower engagement
+
+This parameterization captures the reasonable educational assumption that students who actively participate in learning activities tend to perform better on assessments. The higher α parameter (5 vs 2) for A0 participants shifts the distribution toward higher scores, while maintaining realistic variability in performance.
+
+### 3.(c)
+
+I plotted a histogram of the Class Test results for the entire cohort to illustrate the distribution of scores. Subsequently, students were divided into two groups based on whether they participated in A0, with corresponding box plots generated for each group to compare differences in central tendency and dispersion between the two sets of results. Both box plots employ the identical vertical axis range [0,1] for comparative purposes.
+
+```{r}
+# Create plots
+par(mfrow = c(1, 3))  # Arrange 3 plots side by side
+
+# Histogram of all C scores
+hist(gradebook$C, 
+     breaks = 30, 
+     main = "Class Test Scores\n(All Students)", 
+     xlab = "Score", 
+     ylab = "Frequency",
+     col = "lightblue",
+     xlim = c(0, 1),
+     las = 1)
+
+# Box plot for students who participated in A0
+boxplot(gradebook$C[gradebook$A0 == 1], 
+        main = "Class Test Scores\n(A0 Participants)", 
+        ylab = "Score",
+        col = "lightgreen",
+        ylim = c(0, 1),
+        las = 1)
+
+# Box plot for students who did NOT participate in A0
+boxplot(gradebook$C[gradebook$A0 == 0], 
+        main = "Class Test Scores\n(Non-A0 Participants)", 
+        ylab = "Score",
+        col = "lightcoral",
+        ylim = c(0, 1),
+        las = 1)
+
+# Reset plotting parameters
+par(mfrow = c(1, 1))
+```
+
+## 4. Assign Homework Pods
+
+### 4.(a)
+
+First, I added a new column titled “HomeworkPod” in the Grade Book. To ensure reproducible results, I initially set the random seed with “set.seed(789)”.
+
+For each lab, I first extracted all students within that lab and randomly shuffled their order. Grouping was then determined based on the lab's size: when the lab had 20 students, they were divided into 5 pods of 4 students each; When the lab has 21 students, divide into 4 pods of 4 and 1 pod of 5; When the lab has 19 students, divide into 4 pods of 4 and 1 pod of 3. Next, sequentially assign Pod labels (A, B, C, D, E) to the shuffled students and write the results to the HomeworkPod column in the Grade Book.
+
+```{r}
+set.seed(789)  # For reproducibility
+
+# Initialize Homework Pod column
+gradebook$HomeworkPod <- NA
+
+# Function to assign pods within a lab
+assign_pods <- function(lab_size) {
+  if (lab_size == 20) {
+    # 20 students: 5 pods of 4 (A, B, C, D, E)
+    return(rep(LETTERS[1:5], each = 4))
+  } else if (lab_size == 21) {
+    # 21 students: 4 pods of 4 + 1 pod of 5 (A, B, C, D, E)
+    return(c(rep(LETTERS[1:4], each = 4), rep("E", 5)))
+  } else if (lab_size == 19) {
+    # 19 students: 4 pods of 4 + 1 pod of 3 (A, B, C, D, E)
+    return(c(rep(LETTERS[1:4], each = 4), rep("E", 3)))
+  }
+}
+
+# Assign pods for each lab group
+for (lab in 1:17) {
+  # Get students in this lab
+  lab_students <- which(gradebook$LabGroup == lab)
+  lab_size <- length(lab_students)
+  
+  # Randomly shuffle students within the lab
+  shuffled_students <- sample(lab_students)
+  
+  # Assign pods
+  pods <- assign_pods(lab_size)
+  
+  # Store in gradebook
+  gradebook$HomeworkPod[shuffled_students] <- pods
+}
+
+cat("\nHomework Pods assigned (first 20 rows):\n\n")
+print(head(gradebook, 20))
+
+# Summary of pod assignments
+cat("\nSummary of Homework Pod assignments:\n")
+pod_summary <- table(gradebook$LabGroup, gradebook$HomeworkPod)
+print(pod_summary)
+```
+
+### 4.(b)
+
+My approach is to first assume that any random queueing arrangement among all students yields N! possible permutations. However, since the order within the same group is irrelevant, and swapping positions between different groups does not constitute a new arrangement, these cases must be eliminated. The specific steps are as follows:
+
+```{r}
+
+# Numerical calculations for N = 19, 20, 21
+
+# N = 19 (mod 4 = 3): 4 pods of 4 + 1 pod of 3
+N <- 19
+result_19 <- factorial(N) / (factorial(4)^4 * factorial(3) * factorial(4))
+cat("N = 19:", format(result_19, scientific = FALSE, big.mark = ","), "\n")
+
+# N = 20 (mod 4 = 0): 5 pods of 4
+N <- 20
+result_20 <- factorial(N) / (factorial(4)^5 * factorial(5))
+cat("N = 20:", format(result_20, scientific = FALSE, big.mark = ","), "\n")
+
+# N = 21 (mod 4 = 1): 4 pods of 4 + 1 pod of 5
+N <- 21
+result_21 <- factorial(N) / (factorial(4)^4 * factorial(5) * factorial(4))
+cat("N = 21:", format(result_21, scientific = FALSE, big.mark = ","), "\n")
+
+
+```
+
+### 4.(c)
+
+I have formulated the counting formula derived from the previous question into a function, as follows:
+
+```{r}
+compute_pod_possibilities <- function(N) {
+  # Check if N is a positive integer
+  if (N <= 0 || N != as.integer(N)) {
+    stop("N must be a positive integer")
+  }
+  
+  # Determine which case based on N mod 4
+  remainder <- N %% 4
+  
+  if (remainder == 0) {
+    # Case 1: N divisible by 4
+    num_pods_4 <- N / 4
+    result <- factorial(N) / (factorial(4)^num_pods_4 * factorial(num_pods_4))
+    
+  } else if (remainder == 1) {
+    # Case 2: N mod 4 = 1
+    num_pods_4 <- (N - 5) / 4
+    result <- factorial(N) / (factorial(4)^num_pods_4 * factorial(5) * factorial(num_pods_4))
+    
+  } else if (remainder == 2) {
+    # Case 3: N mod 4 = 2
+    num_pods_4 <- (N - 10) / 4
+    result <- factorial(N) / (factorial(4)^num_pods_4 * factorial(5)^2 * factorial(num_pods_4) * factorial(2))
+    
+  } else {  # remainder == 3
+    # Case 4: N mod 4 = 3
+    num_pods_4 <- (N - 3) / 4
+    result <- factorial(N) / (factorial(4)^num_pods_4 * factorial(3) * factorial(num_pods_4))
+  }
+  
+  return(result)
+}
+
+# Test the function with N = 19, 20, 21
+cat("Testing compute_pod_possibilities():\n")
+cat("N = 19:", format(compute_pod_possibilities(19), scientific = FALSE, big.mark = ","), "\n")
+cat("N = 20:", format(compute_pod_possibilities(20), scientific = FALSE, big.mark = ","), "\n")
+cat("N = 21:", format(compute_pod_possibilities(21), scientific = FALSE, big.mark = ","), "\n")
+```
+
+## 5. Exercise Sets
+
+### 5.(a)
+
+First, set the random seed 'set.seed(101)' to ensure reproducibility of simulation results. For each Pod, I generated E1, E2, and E3 scores using a Beta(4,3) distribution. Subsequently, scores were merged back into the Grade Book according to student Pod affiliation. Next, a histogram is plotted for the E1 scores to observe their distribution shape. The figure reveals scores confined between 0 and 1, exhibiting a unimodal yet slightly skewed distribution. Concurrently, as scores were generated at the Pod level and assigned to students, the histogram displays a degree of dispersion.
+
+```{r}
+set.seed(101)  # For reproducibility
+
+# Exercise Sets are submitted by Homework Pods
+# All students in the same pod get the same score
+
+# Get unique combinations of LabGroup and HomeworkPod
+unique_pods <- unique(gradebook[, c("LabGroup", "HomeworkPod")])
+n_pods <- nrow(unique_pods)
+
+cat("Total number of Homework Pods:", n_pods, "\n\n")
+
+# Generate scores for each pod for E1, E2, E3
+# All follow Beta(4, 3) distribution
+unique_pods$E1_score <- rbeta(n_pods, shape1 = 4, shape2 = 3)
+unique_pods$E2_score <- rbeta(n_pods, shape1 = 4, shape2 = 3)
+unique_pods$E3_score <- rbeta(n_pods, shape1 = 4, shape2 = 3)
+
+# Assign scores to students based on their pod membership
+gradebook <- merge(gradebook, unique_pods, by = c("LabGroup", "HomeworkPod"), all.x = TRUE)
+
+# Rename columns for clarity
+names(gradebook)[names(gradebook) == "E1_score"] <- "E1"
+names(gradebook)[names(gradebook) == "E2_score"] <- "E2"
+names(gradebook)[names(gradebook) == "E3_score"] <- "E3"
+
+# Sort gradebook back to original order
+gradebook <- gradebook[order(gradebook$StudentID), ]
+
+cat("Exercise Set scores added to Grade Book (first 10 rows):\n\n")
+print(head(gradebook, 10))
+
+# Plot histogram of E1
+hist(gradebook$E1, 
+     breaks = 30,
+     main = "Distribution of E1 Scores",
+     xlab = "E1 Score",
+     ylab = "Frequency",
+     col = "lightblue",
+     xlim = c(0, 1))
+
+# Describe the shape of E1 distribution
+cat("\n\nDescription of E1 Distribution Shape:\n")
+cat("--------------------------------------\n")
+cat("Mean:   ", round(mean(gradebook$E1), 3), "\n")
+cat("Median: ", round(median(gradebook$E1), 3), "\n")
+cat("SD:     ", round(sd(gradebook$E1), 3), "\n")
+cat("Min:    ", round(min(gradebook$E1), 3), "\n")
+cat("Max:    ", round(max(gradebook$E1), 3), "\n\n")
+
+cat("The E1 distribution follows a Beta(4, 3) distribution.\n")
+cat("Shape characteristics:\n")
+cat("- Slightly right-skewed (mean ≈ 4/7 ≈ 0.57)\n")
+cat("- Most scores concentrated between 0.4 and 0.8\n")
+cat("- The distribution is unimodal with peak around 0.55-0.60\n")
+cat("- Relatively symmetric but with slightly longer right tail\n")
+cat("- Bounded between 0 and 1 as expected\n\n")
+
+cat("Note: Since scores are assigned by Homework Pods, there are only", 
+    n_pods, "unique values\n")
+cat("(each repeated for students within the same pod), creating a discrete-like\n")
+cat("appearance in the histogram despite the continuous underlying distribution.\n\n")
+
+```
+
+### 5.(b)
+
+```{r}
+# Create pairwise scatter plots
+pairs(gradebook[, c("E1", "E2", "E3")],
+      main = "Pairwise Scatter Plots of Exercise Set Scores",
+      pch = 19,
+      col = rgb(0, 0, 1, 0.3),  # Semi-transparent blue points
+      cex = 0.8)
+
+# Describe observations
+cat("\nObservations from Scatter Plots:\n")
+cat("--------------------------------\n\n")
+
+# Calculate correlations
+cor_E1_E2 <- cor(gradebook$E1, gradebook$E2)
+cor_E1_E3 <- cor(gradebook$E1, gradebook$E3)
+cor_E2_E3 <- cor(gradebook$E2, gradebook$E3)
+
+cat("Correlations:\n")
+cat("  E1 vs E2:", round(cor_E1_E2, 3), "\n")
+cat("  E1 vs E3:", round(cor_E1_E3, 3), "\n")
+cat("  E2 vs E3:", round(cor_E2_E3, 3), "\n\n")
+```
+
+**Key Observations:**
+
+1.  **Lack of linear relationship**: The scatter plots show no clear linear pattern between any pair of exercise sets (E1-E2, E1-E3, E2-E3). Correlations are very close to zero (ranging from -0.142 to 0.031), indicating near-independence. This is expected since each exercise set score was generated independently from Beta(4, 3) distributions.
+
+2.  **Discrete grouping pattern**: Points appear in clusters rather than scattered smoothly across the plot space. This is because students within the same Homework Pod share identical scores for each exercise set. There are approximately 85 distinct positions in each plot, corresponding to the number of Homework Pods.
+
+3.  **Similar marginal distributions**: All three variables show similar ranges (roughly 0.2 to 0.9) and are centered around 0.55-0.60 (theoretical mean = 4/7 ≈ 0.571). This consistency reflects that all three were drawn from the same Beta(4, 3) distribution.
+
+4.  **Random scatter within bounds**: Points are randomly distributed across the [0,1] × [0,1] space with no systematic patterns or outliers evident. The uniform scatter confirms the independence of the three exercise set scores across different pods.
+
+**Conclusion:** The scatter plots confirm that E1, E2, and E3 are independent random variables with similar distributions, as expected from the simulation design. The clustering effect reflects the pod-based scoring system where students collaborate within their Homework Pods.
+
+## 6. Assign Report Pods
+
+### 6.(a)
+
+```{r}
+set.seed(117) 
+
+# Total number of students
+n_students <- nrow(gradebook)
+
+# Report Pod number（340 / 5 = 68）
+n_report_pods <- n_students / 5
+
+# Create a new vector：1,1,1,1,1, 2,2,2,2,2, ..., 68
+report_pod_labels <- rep(1:n_report_pods, each = 5)
+
+# Randomly shuffle these labels and assign them to the students
+gradebook$ReportPod <- sample(report_pod_labels)
+
+# Check whether the number of every pod is 5
+table(gradebook$ReportPod)
+```
+
+### 6.(b)
+
+```{r}
+log_num_assignments <-
+  lfactorial(340) -
+  68 * lfactorial(5) -
+  lfactorial(68)
+
+num_assignments <- exp(log_num_assignments)
+
+num_assignments
+```
+
+### 6.(c)
+
+```{r}
+# Number of other students in the same Homework Pod
+k <- 3
+
+# Number of remaining positions in a Report Pod excluding the student
+m <- 4
+
+# Total number of other students in the cohort
+N <- 339
+
+# Expected number of Homework Pod peers in the same Report Pod for one student
+expected_overlap_per_student <- m * k / N
+
+# Expected number of students in a lab of size 20
+expected_students_with_overlap <- 20 * expected_overlap_per_student
+
+expected_students_with_overlap
+```
+
+## 7. Exercise Sets
+
+### 7.(a)
+
+```{r}
+set.seed(2026) 
+
+# Simulate the number of Logs submitted by each student
+# Each student submits between 0 and 6 logs
+logs_completed <- rbinom(
+  n = n_students,
+  size = 6,
+  prob = 0.9
+)
+
+# Convert the number of submitted logs to a submission fraction
+gradebook$Logs <- logs_completed / 6
+
+# Plot the distribution of log submission fractions
+hist(
+  gradebook$Logs,
+  breaks = 7,
+  col = "lightgrey",
+  main = "Distribution of Log Submission Fractions",
+  xlab = "Fraction of Logs Submitted"
+)
+```
+
+### 7.(b)
+
+```{r}
+# Students submit the DRAFT report if they submitted at least half of the logs
+gradebook$DR <- ifelse(
+  gradebook$Logs >= 0.5,
+  1,
+  0
+)
+
+# Check the number of students who did and did not submit the DRAFT
+table(gradebook$DR)
+```
+
+## 8. Final Report
+
+```{r}
+set.seed(888)  
+
+# Initialise the Final Report column
+gradebook$WR <- NA
+
+# Loop over each Report Pod
+for (p in unique(gradebook$ReportPod)) {
+  
+  # Indices of students belonging to the current Report Pod
+  idx <- which(gradebook$ReportPod == p)
+  
+  # Check whether all students in the pod submitted the DRAFT report
+  all_submitted <- all(gradebook$DR[idx] == 1)
+  
+  # Generate a single mark for the entire pod
+  # Distribution depends on DRAFT submission status
+  if (all_submitted) {
+    pod_score <- rbeta(1, 5, 2)
+  } else {
+    pod_score <- rbeta(1, 3, 2)
+  }
+  
+  # Assign the same Final Report mark to all students in the pod
+  gradebook$WR[idx] <- pod_score
+}
+
+# Summary of Final Report marks
+summary(gradebook$WR)
+
+```
+
+## 9. Module Mark
+
+### 9.(a)
+
+```{r}
+# For each student, identify the best two scores among E1, E2, and E3
+best_two_E <- t(apply(
+  gradebook[, c("E1", "E2", "E3")],
+  1,
+  function(x) sort(x, decreasing = TRUE)[1:2]
+))
+
+# Compute the average of the best two Exercise Set scores
+best_two_E_avg <- rowMeans(best_two_E)
+
+# Apply the penalty to the Final Report mark if the DRAFT was not submitted
+WR_adjusted <- ifelse(
+  gradebook$DR == 1,
+  gradebook$WR,
+  0.6 * gradebook$WR
+)
+
+# Compute the Module Mark on the 0–1 scale
+gradebook$MM <-
+  0.20 * gradebook$C +
+  0.40 * best_two_E_avg +
+  0.02 * gradebook$A1 +
+  0.02 * gradebook$A2 +
+  0.06 * gradebook$Logs +
+  0.30 * WR_adjusted
+
+# Convert the Module Mark to a percentage scale
+gradebook$MM <- 100 * gradebook$MM
+
+head(gradebook)
+```
+
+### 9.(b)
+
+```{r}
+# Compute summary statistics of the Module Mark distribution
+mean(gradebook$MM)
+sd(gradebook$MM)
+summary(gradebook$MM)
+
+# Histogram of Module Marks
+hist(
+  gradebook$MM,
+  breaks = 30,
+  col = "skyblue",
+  main = "Distribution of Module Marks",
+  xlab = "Module Mark (%)"
+)
+
+# Module Marks
+boxplot(
+  gradebook$MM,
+  horizontal = TRUE,
+  col = "lightgreen",
+  main = "Boxplot of Module Marks"
+)
+```
+
+### 9.(c)
+
+```{r}
+# Vector to store the mean Module Mark from each simulation
+means <- numeric(20)
+
+for (i in 1:20) {
+  # Store the mean Module Mark from each run
+  means[i] <- mean(gradebook$MM)
+}
+
+# Standard deviation of the simulated means
+sd(means)
+```
+
+\newpage
+
+# Question B
+
+## 1. The fifty-percent student
+
+### 1.(a)
+Binomial distribution with n=13, p=0.5, E[x]=6.5, Var = 3.25, Std(x) = 1.802776
+```{r}
+p = 0.5
+mean_ = 0.5*13
+var = 0.5*0.5*13
+std = sqrt(13 * 0.5 * 0.5)
+```
+
+
+### 1.(b)
+Answer as below:
+```{r}
+1-pbinom(size=13, q=6,prob=p)
+```
+
+### 1.(c)
+Answer as below, where the first number of each cell is k=0, second is k=1, etc.
+```{r}
+range=0:13
+exact <-dbinom(range, 13, 0.5)
+normal <- dnorm(range, mean=mean_, sd = std)
+normal_cc <- pnorm(range + 0.5, mean_, std) - pnorm(range - 0.5, mean_, std)
+
+data.frame(k=range, exact = exact,normal=normal, normal_cc=normal_cc)
+```
+
+
+### 1.(d)
+```{r}
+plot(range, exact, type = "b", col = "black", pch = 16,
+     xlab="No of correct answers (k)",
+     ylab="Probability",
+     main="Binomial Distribution vs Normal approximations",
+     ylim= c(0, max(exact) * 1.1))
+
+lines(range,normal, type ="b", col = "red",pch = 17)
+lines(range,normal_cc, type ="b", col = "blue", pch = 18)
+
+
+legend("topright", 
+       legend = c("Binomial", "Normal Approx", "Normal approx with CC"),
+       col= c("black", "red", "blue"),
+       pch=c(16, 17, 18),
+       lty=1)
+```
+
+## 2. Various students
+
+### 1.(a) 2. (a)
+We write a function compare_approx to create a comparison table so we do not have to rewrite the code for c
+```{r}
+n <- 13
+range <- 0:13
+
+compare_approx <- function(p) {
+  mean__ <- n*p
+  sigma <- sqrt(n*p * (1-p))
+  exact <- dbinom(range, n, p)
+  normal <- dnorm(range, mean__, sigma)
+  normal_cc <- pnorm(range + 0.5, mean__, sigma) - pnorm(range - 0.5, mean__, sigma)
+  
+  data.frame(k =range, exact =exact, normal= normal, normal_cc = normal_cc)
+}
+
+table_p05 <- compare_approx(0.05)
+table_p10 <- compare_approx(0.10)
+table_p30 <- compare_approx(0.30)
+
+table_p05
+table_p10
+table_p30
+
+```
+
+
+We use mean absolute error (avg. absolute value of deviation of approximation from exact) to compare quality of approximations.
+
+We find that the error gets bigger as p moves away from 0.5, i.e. the approximation gets worse.
+```{r}
+mae <- function(p) {
+  df <- compare_approx(p)
+  c(p = p,
+    normal_MAE = mean(abs(df$exact - df$normal)),
+    normal_cc_MAE = mean(abs(df$exact - df$normal_cc)))
+}
+
+mae(0.05)
+mae(0.10)
+mae(0.30)
+mae(0.50)
+```
+
+
+### 1.(b) 2.(b)
+We do the same as part a, but add the poisson approximation, with lambda=np
+```{r}
+compare_approx_v2 <- function(p) {
+  mean__ <- n*p
+  sigma <- sqrt(n* p * (1-p))
+  lambda <- n*p
+  
+  exact <- dbinom(range, n, p)
+  normal <- dnorm(range, mean__, sigma)
+  normal_cc <- pnorm(range + 0.5, mean__, sigma) - pnorm(range - 0.5, mean__, sigma)
+  poisson <- dpois(range, lambda)
+  
+  data.frame(k = range, exact = exact, normal = normal, normal_cc = normal_cc, poisson=poisson)
+}
+
+table_p05 <- compare_approx_v2(0.05)
+table_p10 <- compare_approx_v2(0.10)
+table_p30 <- compare_approx_v2(0.30)
+
+table_p05
+table_p10
+table_p30
+```
+
+We calculate MAE again, and find that Poisson's error is lower than other approximations for rare events (p low), but has a higher error for events where p is closer to 0.5. Poisson seems to be a better choice for low probability events. Normal, especially with continuity correction, seems to be a better choice for approximations of binomial distributions with p roughly 0.5.
+```{r}
+mae_ <- function(p) {
+  df <- compare_approx_v2(p)
+  c(p = p,
+    normal_MAE = mean(abs(df$exact - df$normal)),
+    normal_cc_MAE = mean(abs(df$exact - df$normal_cc)),
+    poisson_MAE = mean(abs(df$exact - df$poisson)))
+}
+
+mae_(0.05)
+mae_(0.10)
+mae_(0.30)
+mae_(0.50)
+```
+
+
+## 3. The whole cohort
+
+### 3.(a)(i)
+
+Since p_i is distributed uniformly in range (0,1), X_i must also be distributed uniformly in the range (0,13).
+Hence, 
+$$
+P(X_i = x) = \frac{1}{14} \text{ for all } x \in \{0, \ldots, 13\}
+$$
+
+Therefore,
+$$
+P(Z_i = 1) = P(X_i \geq 7) = \sum_{k=7}^{13} \frac{1}{14} = \frac{7}{14} = \frac{1}{2}
+$$
+So the distribution of Z_i is given by Bernoulli(1/2), with Z_i independent for all i in (1,...,340)
+
+### 3.(a)(ii)
+
+Answer as follows:
+```{r}
+p_i = runif(340)
+X_i = rbinom(340, 13, p_i)
+Z_i = as.numeric(X_i >= 7)
+
+hist(X_i, breaks = 18) 
+
+successfulStudents = sum(Z_i)
+successfulStudents
+```
+
+### 3.(b)
+
+Answer as follows:
+```{r}
+
+distBeta = function(a, b) {
+  p_i = rbeta(340, a, b)
+  X_i = rbinom(340, 13, p_i)
+  Z_i = as.numeric(X_i >= 7)
+  
+  hist(X_i, main = sprintf("Beta(%g, %g) Distribution", a, b)) 
+  
+  successfulStudents = sum(Z_i)
+  successfulStudents
+}
+
+distBeta(5,5)
+distBeta(0.5,0.5)
+distBeta(2,10)
+distBeta(9,9)
+distBeta(1,1) 
+
+# Therefore beta(1,1) has the same distribution as a)
+
+```
