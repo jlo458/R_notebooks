@@ -1,0 +1,816 @@
+---
+title: "ST117 E3"
+author: "Homework Lab Group xyz Pod X"
+output:
+  pdf_document: default
+editor_options: 
+  markdown: 
+    wrap: 72
+---
+
+-   Please read the document "Guidance on Exercise Sets" on Moodle.
+-   Please replace xyz and X in the header by the correct codes for your
+    Homework Pod.
+-   Please list all Homework Pod members who contributed to these
+    solutions and which questions/parts they are responsible for (final
+    write up).
+-   We put together some generic examples for TEX commands, inclusion of
+    photos or images, and for data visualisation. See at the end of the
+    document. Please delete them before submission.
+-   Please use R code chunks only for code and very brief technical
+    comments tied directly to specific lines. All other text (e.g.
+    explanations of coding, statistical reasoning, analytical steps, and
+    conclusions) should be written outside the chunks.
+-   Please remember to submit both this Rmd file AND a the pdf output
+    after knitting.
+
+# This submission was created by:
+
+1.  Name and WARWICK ID: Chigozie Iheanyichukwu 2259977: A 1,2,3
+2.  Name and WARWICK ID: Liuyinuo Du 5694901: B 1,2 
+3.  Name and WARWICK ID: Changxuan Li 5695200: B 3,4
+4.  Name and WARWICK ID: Lopich Jan 5678772: B 5,6
+
+```{r setup, include=FALSE}
+#Code to setup packages should go here, for example:
+library(knitr)
+```
+
+# Question A: Thief in the kitchen
+
+## 1. Derive MoM and MLE estimators
+
+$X_1, ..., X_n$ represent i.i.d random variables representing waiting times in days between thefts. The waiting time includes the day the theft happens so $X_i \geq 1$. We model them as geometric as per the question:
+
+$$P(X = k) = (1-p)^{k-1} p, \quad where \  k = 1, 2, 3, ...$$
+
+The mean of the geometric distribution is $E[X] = 1/p$.
+
+We set the first population moment equal to the first sample moment i.e $\frac{1}{p} = \bar{X}$$
+
+so **for MoM** solving for p gives us:
+
+$$\hat{p} = \frac{1}{\bar{X}} = \frac{n}{\sum_{i=1}^{n} X_i}$$
+
+For MLE, The use the log-likelihood for n observations.
+
+$$l(p) = n \log(p) + \left(\sum_{i=1}^{n} x_i - n \right) \log(1-p)$$
+
+Then we differentiate and equal to 0:
+
+$$\frac{dl}{dp} = \frac{n}{p} - \frac{\sum x_i - n}{1-p} = 0$$
+
+So $n(1-p) = p(\sum x_i - n)$, and $n = p \sum x_i$ Hence **for MLE**, p is:
+
+$$\hat{p}_{mle} = \frac{n}{\sum_{i=1}^{n} X_i} = \frac{1}{\bar{X}}$$
+
+The second derivative is $-n/p^2 - (\sum x_i - n)/(1-p)^2 < 0$ so this is a maximum. Interestingly, MoM and MLE give the same estimator for the geometric distribution.
+
+## 2. Bias?
+
+We want to check if $E[\hat{p}] = p$. Our estimator is $\hat{p} = 1/\bar{X}$.
+
+The function $h(x) = 1/x$ has second derivative $h''(x) = 2/x^3 > 0$ for $x > 0$, so it is convex. as per Jensens inequality we get:
+
+$$E[\hat{p}] = E\left[\frac{1}{\bar{X}}\right] > \frac{1}{1/p} = p$$
+
+So $E[\hat{p}] > p$ which means the estimator is biased upwards and tends to overestimate p. (MoM and MLE estimator are biased since they are the same thing)
+
+## 3. Fitting using dataset
+
+```{r}
+# read in the data
+thefts <- scan("foodTheftsE3.csv")
+cat("Number of days:", length(thefts), "\n")
+cat("Days with theft:", sum(thefts), "\n")
+```
+
+```{r}
+# find which days had thefts
+theft_days <- which(thefts == 1)
+cat("Theft occurred on days:", theft_days, "\n")
+```
+
+```{r}
+# compute waiting times between consecutive thefts
+waiting_times <- diff(theft_days)
+cat("Waiting times:", waiting_times, "\n")
+n <- length(waiting_times)
+cat("Number of waiting times (n):", n, "\n")
+```
+
+```{r}
+# compute the estimators
+xbar <- mean(waiting_times)
+cat("Sample mean:", xbar, "\n")
+
+p_hat <- 1 / xbar
+cat("MoM estimate of p:", p_hat, "\n")
+cat("MLE estimate of p:", p_hat, "\n")
+```
+
+We have $n = 17$ waiting times between the 18 thefts. The sample mean is $\bar{x} \approx 2.41$ days, so our estimate is
+
+$$\hat{p}_{MoM} = \hat{p}_{MLE} = \frac{1}{\bar{x}} = \frac{1}{2.41} \approx 0.415$$
+
+So we estimate roughly a 41.5% chance of a theft on any given day. Though, this is a s
+
+# Question B: Analysis of exam score distributions
+
+## 1. Finding NAs
+
+```{r} 
+Exams <- read.csv("syntheticExamScoresE3.csv")
+
+Ex118_NA <- is.na(Exams$Ex118)
+ExMA_NA  <- is.na(Exams$ExMA)
+NA_table <- table(ST118_NA = Ex118_NA,
+                  Maths_NA = ExMA_NA)
+
+NA_table
+addmargins(NA_table)
+
+both_taken <- sum(!Ex118_NA & !ExMA_NA)
+
+only_118 <- sum(!Ex118_NA & ExMA_NA)
+
+only_MA <- sum(Ex118_NA & !ExMA_NA)
+
+neither <- sum(Ex118_NA & ExMA_NA)
+
+both_taken
+only_118
+only_MA
+neither
+```
+
+## 2. Descriptive analysis
+
+```{r}
+Ex118_clean <- Exams$Ex118[!is.na(Exams$Ex118)]
+
+mean(Ex118_clean)
+
+sd(Ex118_clean)
+
+median(Ex118_clean)
+
+min(Ex118_clean)
+
+max(Ex118_clean)
+
+quantile(Ex118_clean)
+
+ExMA_clean <- Exams$ExMA[!is.na(Exams$ExMA)]
+
+mean(ExMA_clean)
+
+sd(ExMA_clean)
+
+median(ExMA_clean)
+
+min(ExMA_clean)
+
+max(ExMA_clean)
+
+quantile(ExMA_clean)
+
+hist(Ex118_clean,
+     breaks = 20,
+     probability = TRUE,
+     main = "Histogram of ST118 Scores",
+     xlab = "ST118 Score")
+
+hist(ExMA_clean,
+     breaks = 20,
+     probability = TRUE,
+     main = "Histogram of Maths Scores",
+     xlab = "Maths Score")
+
+complete_data <- Exams[complete.cases(Exams$Ex118, Exams$ExMA), ]
+
+head(complete_data)
+
+plot(complete_data$Ex118,
+     complete_data$ExMA,
+     main = "Scatterplot of ST118 vs Maths",
+     xlab = "ST118 Score",
+     ylab = "Maths Score")
+
+cor(complete_data$Ex118,
+    complete_data$ExMA)
+
+plot(jitter(complete_data$Ex118),
+     jitter(complete_data$ExMA),
+     main = "Scatterplot with Jitter",
+     xlab = "ST118 Score",
+     ylab = "Maths Score")
+
+plot(complete_data$Ex118,
+     complete_data$ExMA,
+     col = rgb(0,0,0,0.4),
+     pch = 16,
+     main = "Scatterplot with Transparency",
+     xlab = "ST118 Score",
+     ylab = "Maths Score")
+
+pairs <- paste(complete_data$Ex118,
+               complete_data$ExMA)
+
+pair_counts <- table(pairs)
+
+duplicated_pairs <- pair_counts[pair_counts > 1]
+
+students_in_duplicates <- sum(duplicated_pairs)
+
+students_in_duplicates
+```
+
+## 3. MoM for Normal
+
+```{r}
+Exams <- read.csv("syntheticExamScoresE3.csv")
+
+# Extract data by group
+x118_all <- na.omit(Exams$Ex118)          # including zeros
+xMA_all  <- na.omit(Exams$ExMA)
+x118_pos <- x118_all[x118_all > 0]       # excluding zeros
+xMA_pos  <- xMA_all[xMA_all > 0]
+```
+
+```{r}
+# MOM estimators = sample mean + sample standard deviation
+mu118  <- mean(x118_all);  sig118  <- sd(x118_all)
+muMA   <- mean(xMA_all);   sigMA   <- sd(xMA_all)
+mu118p <- mean(x118_pos);  sig118p <- sd(x118_pos)
+muMAp  <- mean(xMA_pos);   sigMAp  <- sd(xMA_pos)
+
+cat("Normal Distribution Parameters (including zeros) \n")
+cat("Ex118: mu =", round(mu118,4),  "sigma =", round(sig118,4),  "\n")
+cat("ExMA:  mu =", round(muMA,4),   "sigma =", round(sigMA,4),   "\n")
+cat("Normal Distribution Parameters (excluding zeros) \n")
+cat("Ex118: mu =", round(mu118p,4), "sigma =", round(sig118p,4), "\n")
+cat("ExMA:  mu =", round(muMAp,4),  "sigma =", round(sigMAp,4),  "\n")
+```
+
+```{r}
+# Histogram + fitted normal curve
+par(mfrow=c(2,2))
+hist(x118_all, probability=TRUE, breaks=20, col="lightblue",
+     main="Ex118 (incl. zeros) — Normal Fit", xlab="Score")
+curve(dnorm(x, mu118, sig118), add=TRUE, col="red", lwd=2)
+
+hist(xMA_all, probability=TRUE, breaks=20, col="lightgreen",
+     main="ExMA (incl. zeros) — Normal Fit", xlab="Score")
+curve(dnorm(x, muMA, sigMA), add=TRUE, col="red", lwd=2)
+
+hist(x118_pos, probability=TRUE, breaks=20, col="lightblue",
+     main="Ex118 (excl. zeros) — Normal Fit", xlab="Score")
+curve(dnorm(x, mu118p, sig118p), add=TRUE, col="red", lwd=2)
+
+hist(xMA_pos, probability=TRUE, breaks=20, col="lightgreen",
+     main="ExMA (excl. zeros) — Normal Fit", xlab="Score")
+curve(dnorm(x, muMAp, sigMAp), add=TRUE, col="red", lwd=2)
+```
+
+```{r}
+# Q-Q plots
+par(mfrow=c(2,2))
+qqnorm(x118_all, main="Q-Q Plot: Ex118 (incl. zeros)");  qqline(x118_all, col="red", lwd=2)
+qqnorm(xMA_all,  main="Q-Q Plot: ExMA (incl. zeros)");   qqline(xMA_all,  col="red", lwd=2)
+qqnorm(x118_pos, main="Q-Q Plot: Ex118 (excl. zeros)");  qqline(x118_pos, col="red", lwd=2)
+qqnorm(xMA_pos,  main="Q-Q Plot: ExMA (excl. zeros)");   qqline(xMA_pos,  col="red", lwd=2)
+```
+
+## 4. Parameter calculations and MoM for Gamma
+
+#### 1. The Gamma Distribution
+
+A random variable $X \sim \text{Gamma}(\alpha, \beta)$ with shape
+$\alpha > 0$ and rate $\beta > 0$ has p.d.f.:
+
+$$
+f(x;\,\alpha,\beta)
+  = \frac{\beta^{\alpha}}{\Gamma(\alpha)}\, x^{\alpha - 1}\, e^{-\beta x},
+  \qquad x > 0,
+$$
+
+where $\Gamma(\alpha) = \int_0^{\infty} t^{\alpha-1} e^{-t}\, dt$
+satisfies the recurrence $\Gamma(\alpha + 1) = \alpha\,\Gamma(\alpha)$.
+
+#### 2. Mean
+
+$$
+\mathbb{E}[X]
+  = \int_0^{\infty} x \cdot \frac{\beta^{\alpha}}{\Gamma(\alpha)}\,
+    x^{\alpha-1}\, e^{-\beta x}\, dx
+  = \frac{\beta^{\alpha}}{\Gamma(\alpha)}
+    \int_0^{\infty} x^{\alpha}\, e^{-\beta x}\, dx.
+$$
+
+**Substitution** $u = \beta x$ $\Rightarrow$ $x = u/\beta$,
+$dx = du/\beta$:
+
+$$
+\int_0^{\infty} x^{\alpha}\, e^{-\beta x}\, dx
+  = \frac{1}{\beta^{\alpha+1}} \int_0^{\infty} u^{\alpha}\, e^{-u}\, du
+  = \frac{\Gamma(\alpha + 1)}{\beta^{\alpha+1}}.
+$$
+
+Substituting back and using $\Gamma(\alpha+1) = \alpha\,\Gamma(\alpha)$:
+
+$$
+\begin{aligned}
+\mathbb{E}[X]
+&= \frac{\beta^{\alpha}}{\Gamma(\alpha)} \cdot
+   \frac{\Gamma(\alpha+1)}{\beta^{\alpha+1}} \\
+&= \frac{\alpha\,\Gamma(\alpha)}{\beta\,\Gamma(\alpha)} \\
+&= \frac{\alpha}{\beta}.
+\end{aligned}
+$$
+
+#### 3. Variance
+
+Given $n$ i.i.d. observations $x_1,\ldots,x_n > 0$, define:
+
+$$
+\bar{x} = \frac{1}{n}\sum_{i=1}^n x_i,
+\qquad
+m_2 = \frac{1}{n}\sum_{i=1}^n (x_i - \bar{x})^2.
+$$
+
+> $m_2$ divides by $n$ (not $n-1$) because MoM equates population
+> moments directly to sample moments.
+
+**System of equations** (population = sample):
+
+$$
+\begin{cases}
+\dfrac{\alpha}{\beta} = \bar{x} \\[8pt]
+\dfrac{\alpha}{\beta^2} = m_2
+\end{cases}
+$$
+
+**Solving:** divide the first equation by the second:
+
+$$
+\frac{\alpha/\beta}{\alpha/\beta^2} = \beta = \frac{\bar{x}}{m_2}
+\quad\Longrightarrow\quad
+\hat{\beta} = \frac{\bar{x}}{m_2}.
+$$
+
+Substitute back into the first equation:
+
+$$
+\hat{\alpha} = \hat{\beta}\,\bar{x} = \frac{\bar{x}^2}{m_2}.
+$$
+
+The **MoM estimators** for the Gamma distribution are:
+
+$$
+  \hat{\alpha}_{\text{MoM}} = \frac{\bar{x}^2}{m_2},
+  \qquad
+  \hat{\beta}_{\text{MoM}}  = \frac{\bar{x}}{m_2}.
+$$
+
+##### 3.1 Second Moment
+
+$$
+\mathbb{E}[X^2]
+  = \frac{\beta^{\alpha}}{\Gamma(\alpha)}
+    \int_0^{\infty} x^{\alpha+1}\, e^{-\beta x}\, dx
+  = \frac{\beta^{\alpha}}{\Gamma(\alpha)} \cdot
+    \frac{\Gamma(\alpha+2)}{\beta^{\alpha+2}}.
+$$
+
+Applying the recurrence twice,
+$\Gamma(\alpha+2) = (\alpha+1)\alpha\,\Gamma(\alpha)$:
+
+$$
+\mathbb{E}[X^2] = \frac{\alpha(\alpha+1)}{\beta^2}.
+$$
+
+##### 3.2 Variance
+
+$$
+\begin{aligned}
+\operatorname{Var}(X)
+&= \mathbb{E}[X^2] - (\mathbb{E}[X])^2 \\
+&= \frac{\alpha(\alpha+1)}{\beta^2} - \frac{\alpha^2}{\beta^2} \\
+&= \frac{\alpha^2 + \alpha - \alpha^2}{\beta^2} \\
+&= \frac{\alpha}{\beta^2}.
+\end{aligned}
+$$
+
+#### 4. Method of Moments Estimators
+
+Given $n$ i.i.d. observations $x_1,\ldots,x_n > 0$, define:
+
+$$
+\bar{x} = \frac{1}{n}\sum_{i=1}^n x_i,
+\qquad
+m_2 = \frac{1}{n}\sum_{i=1}^n (x_i - \bar{x})^2.
+$$
+
+$m_2$ divides by $n$ (not $n-1$) because MoM equates population \>
+moments directly to sample moments.
+
+**System of equations** (population = sample):
+
+$$
+\begin{cases}
+\dfrac{\alpha}{\beta} = \bar{x} \\[8pt]
+\dfrac{\alpha}{\beta^2} = m_2
+\end{cases}
+$$
+
+**Solving:** divide the first equation by the second:
+
+$$
+\frac{\alpha/\beta}{\alpha/\beta^2} = \beta = \frac{\bar{x}}{m_2}
+\quad\Longrightarrow\quad
+\hat{\beta} = \frac{\bar{x}}{m_2}.
+$$
+
+Substitute back into the first equation:
+
+$$
+\hat{\alpha} = \hat{\beta}\,\bar{x} = \frac{\bar{x}^2}{m_2}.
+$$
+
+The **MoM estimators** for the Gamma distribution are:
+
+$$
+  \hat{\alpha}_{\text{MoM}} = \frac{\bar{x}^2}{m_2},
+  \qquad
+  \hat{\beta}_{\text{MoM}}  = \frac{\bar{x}}{m_2}.
+$$
+
+```{r}
+mom_gamma <- function(x) {
+  xbar      <- mean(x)
+  s2        <- var(x)
+  alpha_hat <- xbar^2 / s2
+  beta_hat  <- xbar  / s2
+  return(c(alpha = alpha_hat, beta = beta_hat))
+}
+
+cat("Gamma MoM Parameters (excluding zeros)\n")
+cat("Ex118: "); g118 <- mom_gamma(x118_pos)
+cat("ExMA:  "); gMA  <- mom_gamma(xMA_pos)
+
+# Histograms + Fitted Gamma Density
+
+par(mfrow = c(1, 2))
+
+hist(x118_pos, probability = TRUE, breaks = 20, col = "lightblue",
+     main = "Ex118 (excl. zeros) — Gamma Fit", xlab = "Score")
+curve(dgamma(x, shape = g118["alpha"], rate = g118["beta"]),
+      add = TRUE, col = "darkblue", lwd = 2)
+legend("topleft",
+       legend = paste0("alpha=", round(g118["alpha"],3),
+                       "  beta=", round(g118["beta"],3)),
+       col = "darkblue", lwd = 2, bty = "n", cex = 0.85)
+
+hist(xMA_pos, probability = TRUE, breaks = 20, col = "lightgreen",
+     main = "ExMA (excl. zeros) — Gamma Fit", xlab = "Score")
+curve(dgamma(x, shape = gMA["alpha"], rate = gMA["beta"]),
+      add = TRUE, col = "darkgreen", lwd = 2)
+legend("topleft",
+       legend = paste0("alpha=", round(gMA["alpha"],3),
+                       "  beta=", round(gMA["beta"],3)),
+       col = "darkgreen", lwd = 2, bty = "n", cex = 0.85)
+
+
+# Gamma Q-Q plots (theoretical vs empirical quantiles)
+# Points on the y=x line => good fit
+
+par(mfrow = c(1, 2))
+
+# Ex118
+p118 <- ppoints(length(x118_pos))
+q_th_118 <- qgamma(p118, shape = g118["alpha"], rate = g118["beta"])
+q_em_118 <- sort(x118_pos)
+plot(q_th_118, q_em_118,
+     main = "Gamma Q-Q: Ex118 (excl. zeros)",
+     xlab = "Theoretical Quantiles (Gamma)",
+     ylab = "Sample Quantiles",
+     pch = 16, cex = 0.6, col = "darkblue")
+abline(0, 1, col = "red", lwd = 2)
+
+# ExMA
+pMA  <- ppoints(length(xMA_pos))
+q_th_MA <- qgamma(pMA, shape = gMA["alpha"], rate = gMA["beta"])
+q_em_MA <- sort(xMA_pos)
+plot(q_th_MA, q_em_MA,
+     main = "Gamma Q-Q: ExMA (excl. zeros)",
+     xlab = "Theoretical Quantiles (Gamma)",
+     ylab = "Sample Quantiles",
+     pch = 16, cex = 0.6, col = "darkgreen")
+abline(0, 1, col = "red", lwd = 2)
+```
+
+Based on the output values, the mean and variance are identical to the
+sample, indicating that the theory aligns with the data. Compared to the
+normal distribution, the Gamma distribution only takes positive values
+and can be left-skewed, right-skewed, or even nearly symmetrical. As the
+Gamma distribution has no upper bound, it cannot perfectly describe
+examination scores constrained within [0, 1], thus potentially
+necessitating the use of the Beta distribution.
+
+## 5. Parameter calculations and MoM for Beta
+
+#### Parameter Derivation 
+
+Let $X \sim Beta(\alpha,\beta)$ with pdf
+
+$$
+f(x)=\frac{1}{B(\alpha,\beta)} x^{\alpha-1}(1-x)^{\beta-1}, \quad 0<x<1
+$$
+
+The first moment is given by:
+
+$$
+E[X] = \int_0^1 x f(x) dx
+$$
+
+$$
+= \frac{1}{B(\alpha,\beta)} \int_0^1 x^{\alpha}(1-x)^{\beta-1} dx
+$$
+
+$$
+= \frac{B(\alpha+1,\beta)}{B(\alpha,\beta)}
+$$
+
+Using $B(a,b)=\frac{\Gamma(a)\Gamma(b)}{\Gamma(a+b)}$, this simplifies to:
+
+$$
+E[X] = \frac{\alpha}{\alpha+\beta}
+$$
+
+Second moment is given by:
+
+$$
+E[X^2] = \int_0^1 x^2 f(x) dx
+$$
+
+$$
+= \frac{1}{B(\alpha,\beta)} \int_0^1 x^{\alpha+1}(1-x)^{\beta-1} dx
+$$
+
+$$
+= \frac{B(\alpha+2,\beta)}{B(\alpha,\beta)}
+$$
+Which through cancellation simplifies to: 
+
+$$
+E[X^2] =
+\frac{\alpha(\alpha+1)}{(\alpha+\beta)(\alpha+\beta+1)}
+$$
+Therefore the variance can be calculated through the following: 
+
+$$
+\sigma^2 =
+E[X^2] - (E[X])^2=
+\frac{\alpha\beta}{(\alpha+\beta)^2(\alpha+\beta+1)}
+$$
+
+By then dividing the variance by $\bar{x}$ and substituting $\beta = \frac{\alpha(1-\bar{x})}{\alpha}$, you get: 
+
+$$
+\hat{\alpha} = 
+\left(\frac{(1-\bar{x})\bar{x}}{\sigma^2} - 1\right)\bar{x}
+$$
+and 
+
+$$
+\hat{\beta} = 
+\left(\frac{(1-\bar{x})\bar{x}}{\sigma^2} - 1\right)(1-\bar{x})
+$$
+
+
+```{r}
+Exams <- read.csv("syntheticExamScoresE3.csv")
+
+# Extract data by group
+x118_all <- na.omit(Exams$Ex118)                      # including zeros
+xMA_all  <- na.omit(Exams$ExMA)
+x118_pos <- x118_all[1 > x118_all & x118_all > 0]     # excluding 0s and 1s
+xMA_pos  <- xMA_all[1 > xMA_all & xMA_all > 0]
+```
+
+
+```{r} 
+
+mom_beta <- function(x) {
+  xbar      <- mean(x)
+  s2        <- var(x)
+  alpha_hat <- xbar * ((xbar*(1-xbar)/s2) - 1)
+  beta_hat  <- (1-xbar) * ((xbar*(1-xbar)/s2) - 1)
+  return(c(alpha = alpha_hat, beta = beta_hat))
+}
+
+cat("Gamma MoM Parameters (excluding zeros)\n")
+cat("Ex118: "); b_118 <- mom_beta(x118_pos)
+cat("ExMA:  "); b_MA  <- mom_beta(xMA_pos) 
+
+# Ex118 Plot
+hist(x118_pos, 
+     probability = TRUE, 
+     breaks = 20, 
+     col = "lightblue",
+     main = "Ex118 (excl. zeros) — Beta Fit", 
+     xlab = "Score")
+
+curve(dbeta(x, b_118["alpha"], b_118["beta"]), 
+      add = TRUE, 
+      col = "darkblue", 
+      lwd = 2)
+
+legend("topleft",
+       legend = paste0("alpha=", round(b_118["alpha"],4),
+                       "  beta=", round(b_118["beta"],4)),
+       col = "darkblue", 
+       lwd = 2, 
+       bty = "n", 
+       cex = 0.85)
+
+# ExMA plot
+hist(xMA_pos, 
+     probability = TRUE, 
+     breaks = 20, 
+     col = "lightgreen",
+     main = "ExMA (excl. zeros) — Beta Fit", 
+     xlab = "Score")
+
+curve(dbeta(x, b_MA["alpha"], b_MA["beta"]),
+      add = TRUE, 
+      col = "darkgreen", 
+      lwd = 2)
+
+legend("topleft",
+       legend = paste0("alpha=", round(b_MA["alpha"],4),
+                       "  beta=", round(b_MA["beta"],4)),
+       col = "darkgreen", 
+       lwd = 2, 
+       bty = "n", 
+       cex = 0.85)
+
+
+# Beta Q-Q plots 
+# Determining how good of a model Beta Dist. is 
+
+par(mfrow = c(1, 2))
+
+# Ex118
+p118 <- ppoints(length(x118_pos))
+q_th_118 <- qbeta(p118, b_118["alpha"], b_118["beta"])
+q_em_118 <- sort(x118_pos)
+plot(q_th_118, q_em_118,
+     main = "Beta Q-Q: Ex118 (excl. zeros)",
+     xlab = "Theoretical Quantiles (Beta)",
+     ylab = "Sample Quantiles",
+     pch = 16, cex = 0.6, col = "darkblue")
+abline(0, 1, col = "red", lwd = 2)
+
+# ExMA
+pMA  <- ppoints(length(xMA_pos))
+q_th_MA <- qbeta(pMA, b_MA["alpha"], b_MA["beta"])
+q_em_MA <- sort(xMA_pos)
+plot(q_th_MA, q_em_MA,
+     main = "Beta Q-Q: ExMA (excl. zeros)",
+     xlab = "Theoretical Quantiles (Beta)",
+     ylab = "Sample Quantiles",
+     pch = 16, cex = 0.6, col = "darkgreen")
+abline(0, 1, col = "red", lwd = 2)
+
+```
+
+
+As seen in the Q-Q plots above, the beta models both datasets well, only deviating slightly at the lower tails (particularly for the ExMA dataset). As expected, due to the constraint from [0,1] on the Beta Distribution, it models the dataset much better than Gamma for values at the tails.
+
+## 6. Model fit comparison using likelihood
+
+#### Normal Distribution
+
+Let $X_1,\ldots,X_n$ be IID such that:
+$$
+X_i \sim N(\mu,\sigma^2)
+$$
+
+The pdf is:
+
+$$
+f(x) = \frac{1}{\sqrt{2\pi\sigma^2}}\exp\left(-\frac{(x-\mu)^2}{2\sigma^2}\right)
+$$
+
+Likelihood is given by:
+
+$$
+L(\mu,\sigma^2) = \prod_{i=1}^n f(x_i)=(2\pi\sigma^2)^{-n/2}exp\left(\frac{-1}{2\sigma^2}\sum_{i=1}^n (x_i-\mu)^2\right)
+$$
+Log-likelihood:
+
+$$
+\ell(\mu,\sigma^2)=\sum_{i=1}^n \log f(x_i) 
+$$
+$$
+= -\frac{n}{2}\log(2\pi)-\frac{n}{2}\log(\sigma^2)-\frac{1}{2\sigma^2}\sum_{i=1}^n (x_i-\mu)^2
+$$
+
+#### Gamma Distribution
+
+Let $X_1,....,X_n$ be IID such that: 
+$$
+X_i \sim \Gamma(\alpha,\beta)
+$$
+The pdf is:
+$$
+f(x)=\frac{\beta^\alpha}{\Gamma(\alpha)}x^{\alpha-1}e^{-\beta x}
+$$
+Likelihood given by:
+$$
+L(\alpha,\beta)=\prod_{i=1}^n\frac{\beta^\alpha}{\Gamma(\alpha)}x_i^{\alpha-1}e^{-\beta x_i}
+$$
+And grouping the terms gives: 
+$$
+L(\alpha,\beta)=\left(\frac{\beta^\alpha}{\Gamma(\alpha)}\right)^n\prod_{i=1}^nx_i^{\alpha-1}e^{-\beta \sum_{x} (x_i)}
+$$
+
+Log-likelihood:
+$$
+\ell(\alpha,\beta)=n\alpha\log\beta-n\log\Gamma(\alpha)+(\alpha-1)\sum_{i=1}^n\log x_i-\beta\sum_{i=1}^n x_i
+$$
+
+#### Beta Distribution
+
+Let $X_1,....,X_n$ be IID such that:
+$$
+X_i \sim \beta(\alpha,\beta)
+$$
+The pdf is:
+$$
+f(x)=\frac{1}{B(\alpha,\beta)}x^{\alpha-1}(1-x)^{\beta-1}
+$$
+Likelihood:
+$$
+L(\alpha,\beta)=\prod_{i=1}^n\frac{1}{B(\alpha,\beta)}x_i^{\alpha-1}(1-x_i)^{\beta-1}
+$$
+Simplified to get: 
+$$
+L(\alpha,\beta)=
+\left(\frac{1}{B(\alpha,\beta)}\right)^n
+\prod_{i=1}^n
+x_i^{\alpha-1}
+\prod_{i=1}^n
+(1-x_i)^{\beta-1}
+$$
+
+Log-likelihood:
+$$
+\ell(\alpha,\beta)= 
+-n\log B(\alpha,\beta)
++(\alpha-1)\sum_{i=1}^n \log x_i
++(\beta-1)\sum_{i=1}^n \log(1-x_i)
+$$
+
+```{r}
+
+loglik_norm1  <- sum(dnorm(x118_pos, mu118p, sig118p, log=TRUE))
+loglik_norm2  <- sum(dnorm(xMA_pos, mu118p, sig118p, log=TRUE))
+
+loglik_gamma1 <- sum(dgamma(x118_pos, 
+                           round(mom_gamma(x118_pos)["alpha"],4), 
+                           round(mom_gamma(x118_pos)["beta"],4), 
+                           log=TRUE))
+
+loglik_gamma2 <- sum(dgamma(xMA_pos, 
+                           round(mom_gamma(x118_pos)["alpha"],4), 
+                           round(mom_gamma(x118_pos)["beta"],4), 
+                           log=TRUE))
+
+loglik_beta1  <- sum(dbeta(x118_pos, 
+                          round(mom_beta(x118_pos)["alpha"],4), 
+                          round(mom_beta(x118_pos)["beta"],4), 
+                          log=TRUE))
+
+loglik_beta2  <- sum(dbeta(xMA_pos, 
+                          round(mom_beta(x118_pos)["alpha"],4), 
+                          round(mom_beta(x118_pos)["beta"],4), 
+                          log=TRUE))
+
+table <- matrix(c(loglik_norm1, 
+                  loglik_norm2, 
+                  loglik_gamma1, 
+                  loglik_gamma2,
+                  loglik_beta1, 
+                  loglik_beta2), 
+                nrow = 2) 
+
+colnames(table) <- c("Normal", "Gamma", "Beta")
+rownames(table) <- c("Ex118", "ExMA")
+
+table
+```
+The best fitting model is determined by comparing log-likelihood values, where larger values indicate a better fit. For both datasets, the Normal Distribution has the highest log-likelihood, indicating that it provides the best fit among the three distributions considered.
+
