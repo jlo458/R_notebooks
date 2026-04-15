@@ -9,22 +9,139 @@ output: pdf_document
 knitr::opts_chunk$set(echo = TRUE)
 ```
 
-## R Markdown
+## libraries
+```{r}
+install.packages(c("dplyr", "lubridate"))
 
-This is an R Markdown document. Markdown is a simple formatting syntax for authoring HTML, PDF, and MS Word documents. For more details on using R Markdown see <http://rmarkdown.rstudio.com>.
-
-When you click the **Knit** button a document will be generated that includes both content as well as the output of any embedded R code chunks within the document. You can embed an R code chunk like this:
-
-```{r cars}
-summary(cars)
+library(dplyr)
+library(lubridate)
+library(ggplot2)
 ```
 
-## Including Plots
 
-You can also embed plots, for example:
+## Q4
 
-```{r pressure, echo=FALSE}
-plot(pressure)
+```{r}
+fineGrain <- read.csv("finegrain.csv")
+butterflies <- read.csv("butterflies.csv")
+
 ```
 
-Note that the `echo = FALSE` parameter was added to the code chunk to prevent printing of the R code that generated the plot.
+
+```{r}
+# Data Cleaning 
+
+butterflies$SDATE = as.Date(data_butterflies$SDATE, format = "%d-%b-%y")
+
+butterflies$YEAR <- year(butterflies$SDATE) 
+
+# Aggregate Butterflies Dataset
+butterfly_summary <- butterflies %>%
+  group_by(SITECODE, YEAR) %>%
+  summarise(
+    Total_Butterflies = sum(VALUE, na.rm = TRUE), 
+    .groups = "drop"
+  )
+
+# Aggregate FineGrain Dataset
+fineGrain_summary <- fineGrain %>%
+  group_by(SITECODE, SYEAR) %>%
+  summarise(
+    Unique_FG_Species = n_distinct(VALUE),
+    .groups = "drop"
+  ) %>%
+  rename(YEAR = SYEAR)
+
+
+combined_dataset <- butterfly_summary %>%
+  left_join(fineGrain_summary, by = c("SITECODE", "YEAR"))
+
+
+combined_dataset
+
+```
+
+```{r}
+
+ggplot(combined_dataset, aes(x = Unique_FG_Species, y = Total_Butterflies)) +
+  geom_point(color = "blue") +
+  #geom_smooth(method = "lm", color = "red", se = FALSE) +
+  labs(
+    title = "Relationship Between Species Richness and Butterfly Abundance",
+    x = "Number of Unique Fine Grain Species",
+    y = "Total Butterfly Count"
+  ) +
+  theme_classic() +
+  theme(plot.title = element_text(hjust = 0.5))
+
+```
+What can be said 
+- ??? 
+
+
+```{r}
+
+ggplot(combined_dataset, aes(x = Unique_FG_Species, y = Total_Butterflies)) +
+  geom_point(color = "blue") +
+  geom_smooth(method = "lm", color = "red", se = FALSE) +
+  labs(
+    title = "Relationship Between Species Richness and Butterfly Abundance",
+    x = "Number of Unique Fine Grain Species",
+    y = "Total Butterfly Count"
+  ) +
+  theme_classic() +
+  theme(plot.title = element_text(hjust = 0.5))
+
+
+```
+```{r}
+model <- lm(Total_Butterflies ~ Unique_FG_Species, data = combined_dataset)
+summary(model)
+```
+## Summary for part c 
+... 
+
+```{r}
+
+# 
+data_fg <- combined_dataset %>%
+  filter(!is.na(Unique_FG_Species))
+
+
+models_by_site <- data_fg %>%
+  group_by(SITECODE) %>%
+  do(model = lm(Total_Butterflies ~ Unique_FG_Species, data = .))
+
+
+ggplot(data_fg, aes(x = Unique_FG_Species, y = Total_Butterflies)) +
+  geom_point() +
+  
+  # Site-specific regression lines (red)
+  geom_smooth(method = "lm", se = FALSE, color = "red") +
+  
+  # Global regression line (blue dashed, SAME in every facet)
+  geom_abline(
+    intercept = coef(model)[1],
+    slope = coef(model)[2],
+    color = "blue",
+    size = 1,
+    alpha = 0.8
+  ) +
+  
+  facet_wrap(~ SITECODE) +
+  theme_classic() +
+  labs(
+    title = "Site-specific vs Overall Linear Relationships",
+    x = "Unique Fine Grain Species",
+    y = "Total Butterfly Count"
+  )
+
+lapply(models_by_site$model, summary)
+
+```
+
+
+
+
+
+
